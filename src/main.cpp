@@ -40,6 +40,9 @@ bool firstMouse = true;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
+//spotLight switch
+bool spotSwitch = false;
+
 struct PointLight {
     glm::vec3 position;
     glm::vec3 ambient;
@@ -212,6 +215,25 @@ int main() {
         ourShader.setFloat("pointLight.constant", pointLight.constant);
         ourShader.setFloat("pointLight.linear", pointLight.linear);
         ourShader.setFloat("pointLight.quadratic", pointLight.quadratic);
+        //spotLight
+        ourShader.setVec3("spotLight.ambient",  0.1f, 0.1f, 0.1f);
+        ourShader.setVec3("spotLight.diffuse",  0.6f, 0.6f, 0.6f);
+        ourShader.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
+        ourShader.setVec3("spotLight.direction", programState->camera.Front);
+        ourShader.setVec3("spotLight.position", programState->camera.Position);
+        ourShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
+        ourShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(17.5f)));
+        ourShader.setFloat("spotLight.constant",  1.0f);
+        ourShader.setFloat("spotLight.linear",    0.09f);
+        ourShader.setFloat("spotLight.quadratic", 0.032f);
+        ourShader.setBool("spotLight.spotSwitch", spotSwitch);
+        //directionLight
+        ourShader.setVec3("directionLight.ambient",  0.1f, 0.1f, 0.1f);
+        ourShader.setVec3("directionLight.diffuse",  0.1f, 0.1f, 0.1f);
+        ourShader.setVec3("directionLight.specular", 0.1f, 0.1f, 0.1f);
+        ourShader.setVec3("directionLight.direction", 0.0f, -1.0f, 0.0f);
+
+
         ourShader.setVec3("viewPosition", programState->camera.Position);
         ourShader.setFloat("material.shininess", 32.0f);
         // view/projection transformations
@@ -344,5 +366,8 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
         } else {
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         }
+    }
+    if(key==GLFW_KEY_Y && action == GLFW_PRESS){
+        spotSwitch = !spotSwitch;
     }
 }
