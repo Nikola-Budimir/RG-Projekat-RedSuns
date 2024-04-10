@@ -181,6 +181,10 @@ int main() {
     pointLight.linear = 0.09f;
     pointLight.quadratic = 0.032f;
 
+    //enabling blending
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 
     //buffering of vertexes and loading textures
 
@@ -233,6 +237,26 @@ int main() {
     {
         std::cout << "Failed to load texture" << std::endl;
     }
+    unsigned int glassTex;
+    glGenTextures(1, &glassTex);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, glassTex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    data = stbi_load("resources/textures/blending_transparent_window.png", &width, &height, &nrChannels, 0);
+    if (data)
+    {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else
+    {
+        std::cout << "Failed to load texture" << std::endl;
+    }
+
+
 
 
 
@@ -311,10 +335,16 @@ int main() {
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
 
+
+
 //     // render the loaded model
+        glBindTexture(GL_TEXTURE_2D, glassTex);
 //
-//        glm::mat4 model = glm::mat4(1.0f);
-//        model = glm::translate(model,programState->backpackPosition); // translate it down so it's at the center of the scene
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::translate(model,programState->backpackPosition);
+        ourShader.setMat4("model", model);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        // translate it down so it's at the center of the scene
 //        model = glm::scale(model, glm::vec3(programState->backpackScale));    // it's a bit too big for our scene, so scale it down
 //        ourShader.setMat4("model", model);
 //        ourModel.Draw(ourShader);
