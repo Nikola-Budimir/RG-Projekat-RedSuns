@@ -48,7 +48,7 @@ in vec2 TexCoords;
 in vec3 Normal;
 in vec3 FragPos;
 
-uniform PointLight pointLight;
+uniform PointLight pointLight[2];
 uniform DirectionLight directionLight;
 uniform SpotLight spotLight;
 uniform Material material;
@@ -128,7 +128,10 @@ void main()
     vec3 normal = normalize(Normal);
     vec3 viewDir = normalize(viewPosition - FragPos);
 
-    vec3 result = CalcPointLight(pointLight, normal, FragPos, viewDir);
+    vec3 result = vec3(0.0f);
+
+    result += CalcPointLight(pointLight[0], normal, FragPos, viewDir);
+    result += CalcPointLight(pointLight[1], normal, FragPos, viewDir);
     result += CalcDirLight(directionLight, normal, viewDir);
 
      if(spotLight.spotSwitch)

@@ -171,6 +171,7 @@ int main() {
     stbi_set_flip_vertically_on_load(false);
     Shader ourShader("resources/shaders/2.model_lighting.vs", "resources/shaders/2.model_lighting.fs");
     Shader skyboxShader("resources/shaders/skybox.vs", "resources/shaders/skybox.fs");
+    Shader lightCubeShader("resources/shaders/1.light_cube.vs", "resources/shaders/1.light_cube.fs");
 
     // load models
     // -----------
@@ -178,38 +179,33 @@ int main() {
 
     PointLight& pointLight = programState->pointLight;
     pointLight.position = glm::vec3(4.0f, 4.0, 0.0);
-    pointLight.ambient = glm::vec3(0.1, 0.1, 0.1);
-    pointLight.diffuse = glm::vec3(0.6, 0.6, 0.6);
+    pointLight.ambient = glm::vec3(0.05, 0.05, 0.05);
+    pointLight.diffuse = glm::vec3(0.4, 0.4, 0.4);
     pointLight.specular = glm::vec3(1.0, 1.0, 1.0);
 
     pointLight.constant = 1.0f;
-    pointLight.linear = 0.09f;
-    pointLight.quadratic = 0.032f;
+    pointLight.linear = 0.04f;
+    pointLight.quadratic = 0.016f;
 
     //enabling blending
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_DEPTH_TEST);
 
-    Model ourModel("resources/objects/jdm/AE86Trueno.obj");
-    ourModel.SetShaderTextureNamePrefix("material.");
+    Model AE86("resources/objects/jdm/AE86Trueno.obj");
+    AE86.SetShaderTextureNamePrefix("material.");
+
+    Model lamps("resources/objects/lamps/lamps.obj");
+    lamps.SetShaderTextureNamePrefix("material.");
+
+    Model dumpster("resources/objects/dumpster/dumpster_obj.obj");
+    dumpster.SetShaderTextureNamePrefix("material.");
 
     //enabling faceculling
     /*glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     glFrontFace(GL_CW);*/
 
-    //wood floor
-  /*  float planeVertices[] = {
-            // positions            // normals         // texcoords
-            10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
-            -10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
-            -10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
-
-            10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
-            -10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
-            10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,  10.0f, 10.0f
-    };*/
 
     float skyboxVertices[] = {
             // positions
@@ -255,20 +251,6 @@ int main() {
             -1.0f, -1.0f,  1.0f,
             1.0f, -1.0f,  1.0f
     };
-    // plane VAO
-   /* unsigned int planeVAO, planeVBO;
-    glGenVertexArrays(1, &planeVAO);
-    glGenBuffers(1, &planeVBO);
-    glBindVertexArray(planeVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), planeVertices, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    glBindVertexArray(0);*/
 
     //skyboxVAO
     unsigned int skyboxVAO, skyboxVBO;
@@ -279,6 +261,59 @@ int main() {
     glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+
+    //lightCube
+    float vertices[] = {
+            -0.5f, -0.5f, -0.5f,
+            0.5f, -0.5f, -0.5f,
+            0.5f,  0.5f, -0.5f,
+            0.5f,  0.5f, -0.5f,
+            -0.5f,  0.5f, -0.5f,
+            -0.5f, -0.5f, -0.5f,
+
+            -0.5f, -0.5f,  0.5f,
+            0.5f, -0.5f,  0.5f,
+            0.5f,  0.5f,  0.5f,
+            0.5f,  0.5f,  0.5f,
+            -0.5f,  0.5f,  0.5f,
+            -0.5f, -0.5f,  0.5f,
+
+            -0.5f,  0.5f,  0.5f,
+            -0.5f,  0.5f, -0.5f,
+            -0.5f, -0.5f, -0.5f,
+            -0.5f, -0.5f, -0.5f,
+            -0.5f, -0.5f,  0.5f,
+            -0.5f,  0.5f,  0.5f,
+
+            0.5f,  0.5f,  0.5f,
+            0.5f,  0.5f, -0.5f,
+            0.5f, -0.5f, -0.5f,
+            0.5f, -0.5f, -0.5f,
+            0.5f, -0.5f,  0.5f,
+            0.5f,  0.5f,  0.5f,
+
+            -0.5f, -0.5f, -0.5f,
+            0.5f, -0.5f, -0.5f,
+            0.5f, -0.5f,  0.5f,
+            0.5f, -0.5f,  0.5f,
+            -0.5f, -0.5f,  0.5f,
+            -0.5f, -0.5f, -0.5f,
+
+            -0.5f,  0.5f, -0.5f,
+            0.5f,  0.5f, -0.5f,
+            0.5f,  0.5f,  0.5f,
+            0.5f,  0.5f,  0.5f,
+            -0.5f,  0.5f,  0.5f,
+            -0.5f,  0.5f, -0.5f,
+    };
+    unsigned int lightCubeVAO, lightCubeVBO;
+    glGenVertexArrays(1, &lightCubeVAO);
+    glGenBuffers(1, &lightCubeVBO);
+    glBindVertexArray(lightCubeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, lightCubeVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), &vertices, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
 
     // load textures
     // -------------
@@ -370,19 +405,27 @@ int main() {
         // don't forget to enable shader before setting uniforms
         ourShader.use();
 
-
-        //point light
-        pointLight.position = glm::vec3 (0.0f, 1.0f, 0.0f);
-        //glm::vec3(4.0 * cos(currentFrame), 4.0f, 4.0 * sin(currentFrame));
-        ourShader.setVec3("pointLight.position", pointLight.position);
-        ourShader.setVec3("pointLight.ambient", pointLight.ambient);
-        ourShader.setVec3("pointLight.diffuse", pointLight.diffuse);
-        ourShader.setVec3("pointLight.specular", pointLight.specular);
-        ourShader.setFloat("pointLight.constant", pointLight.constant);
-        ourShader.setFloat("pointLight.linear", pointLight.linear);
-        ourShader.setFloat("pointLight.quadratic", pointLight.quadratic);
         ourShader.setVec3("viewPosition", programState->camera.Position);
         ourShader.setFloat("material.shininess", 32.0f);
+
+//        //point light 1
+        pointLight.position = glm::vec3 (-1.74f, 1.48f, -0.12f);
+        ourShader.setVec3("pointLight[0].position", pointLight.position);
+        ourShader.setVec3("pointLight[0].ambient", pointLight.ambient);
+        ourShader.setVec3("pointLight[0].diffuse", pointLight.diffuse);
+        ourShader.setVec3("pointLight[0].specular", pointLight.specular);
+        ourShader.setFloat("pointLight[0].constant", pointLight.constant);
+        ourShader.setFloat("pointLight[0].linear", pointLight.linear);
+        ourShader.setFloat("pointLight[0].quadratic", pointLight.quadratic);
+            //point light 2
+        pointLight.position = glm::vec3 (1.74f, 1.48f, 0.12f);
+        ourShader.setVec3("pointLight[1].position", pointLight.position);
+        ourShader.setVec3("pointLight[1].ambient", pointLight.ambient);
+        ourShader.setVec3("pointLight[1].diffuse", pointLight.diffuse);
+        ourShader.setVec3("pointLight[1].specular", pointLight.specular);
+        ourShader.setFloat("pointLight[1].constant", pointLight.constant);
+        ourShader.setFloat("pointLight[1].linear", pointLight.linear);
+        ourShader.setFloat("pointLight[1].quadratic", pointLight.quadratic);
 
         //spotlight
 
@@ -400,10 +443,10 @@ int main() {
         ourShader.setBool("spotLight.spotSwitch", spotSwitch);
 
         //direction light
-        ourShader.setVec3("directionLight.ambient",  0.1f, 0.1f, 0.1f);
-        ourShader.setVec3("directionLight.diffuse",  0.1f, 0.1f, 0.1f);
+        ourShader.setVec3("directionLight.ambient",  0.05f, 0.05f, 0.05f);
+        ourShader.setVec3("directionLight.diffuse",  0.2f, 0.2f, 0.08f);
         ourShader.setVec3("directionLight.specular", 0.1f, 0.1f, 0.1f);
-        ourShader.setVec3("directionLight.direction", 0.0f, -1.0f, 0.0f);
+        ourShader.setVec3("directionLight.direction", 0.0f, -1.0f, 1.0f);
 
 
 
@@ -414,13 +457,72 @@ int main() {
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
 
+        //car
+        glm::mat4 model2 = glm::mat4(1.0f);
+        model2 = glm::translate(model2, glm::vec3(-0.5f, 0.11f, -0.5f));
+        model2 = glm::rotate(model2, glm::radians(205.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        model2 = glm::scale(model2, glm::vec3(0.2f));
+        ourShader.setMat4("model", model2);
+        ourShader.setFloat("material.shininess", 128.0f);
+
+        AE86.Draw(ourShader);
+
+        //lamps
+
+        glm::mat4 model3 = glm::mat4(1.0f);
+        model3 = glm::translate(model3, glm::vec3(0.0f, 0.11f, 0.0f));
+        model3 = glm::scale(model3, glm::vec3(0.2f));
+        ourShader.setMat4("model", model3);
+        ourShader.setFloat("material.shininess", 128.0f);
+
+        lamps.Draw(ourShader);
+
+        glm::mat4 model4 = glm::mat4(1.0f);
+        model4 = glm::translate(model4, glm::vec3(2.6f, 0.0f, 0.9f));
+        model4 = glm::rotate(model4, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        model4 = glm::scale(model4, glm::vec3(0.25f));
+        ourShader.setMat4("model", model4);
+
+        dumpster.Draw(ourShader);
+
+        model4 = glm::translate(model4, glm::vec3(-2.1f, 0.0f, 0.0f));
+        model4 = glm::rotate(model4, glm::radians(-10.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        ourShader.setMat4("model", model4);
+
+        dumpster.Draw(ourShader);
+
+        model4 = glm::rotate(model4, glm::radians(10.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        model4 = glm::translate(model4, glm::vec3(-4.5f, 0.0f, 0.0f));
+        model4 = glm::rotate(model4, glm::radians(10.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        ourShader.setMat4("model", model4);
+
+        dumpster.Draw(ourShader);
 
 
+
+
+
+
+       /* lightCubeShader.use();
+        lightCubeShader.setMat4("projection", projection);
+        lightCubeShader.setMat4("view", view);
+        glm::mat4 model5 = glm::mat4(1.0f);
+        model5 = glm::translate(model5, glm::vec3(1.74f, 1.48f, 0.12f));
+        model5 = glm::scale(model5, glm::vec3(0.05f)); // a smaller cube
+        lightCubeShader.setMat4("model", model5);
+
+        glBindVertexArray(lightCubeVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 36);*/
+
+
+        //road
+
+        ourShader.use();
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::scale(model, glm::vec3(2.0f));
+        model = glm::scale(model, glm::vec3(3.0f));
         ourShader.setMat4("model", model);
+        ourShader.setFloat("material.shininess", 32.0f);
 
-        // floor
         glBindVertexArray(VAO);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, roadTex);
@@ -428,15 +530,7 @@ int main() {
 
         glBindTexture(GL_TEXTURE_2D, 0);
 
-        glm::mat4 model2 = glm::mat4(1.0f);
-        model2 = glm::translate(model2, glm::vec3(-0.5f, 0.2f, -0.5f));
-        model2 = glm::rotate(model2, glm::radians(205.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        model2 = glm::scale(model2, glm::vec3(0.2f));
-        ourShader.setMat4("model", model2);
-        ourShader.setFloat("material.shininess", 128.0f);
 
-
-        ourModel.Draw(ourShader);
 
 
 
