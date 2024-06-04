@@ -59,11 +59,12 @@ struct ProgramState {
     bool ImGuiEnabled = false;
     Camera camera;
     bool CameraMouseMovementUpdateEnabled = true;
-    glm::vec3 backpackPosition = glm::vec3(0.0f);
-    float backpackScale = 1.0f;
     DirectionLight directionLight;
     bool shadows = true;
     Model *AE86, *lamps, *dumpster;
+
+    glm::vec3 ae86pos = glm::vec3(0.0f, 0.11f, 0.0f);
+    float ae86angle = 205.0f;
 
     ProgramState()
             : camera(glm::vec3(0.0f, 0.0f, 3.0f)) {}
@@ -81,7 +82,10 @@ void ProgramState::SaveToFile(std::string filename) {
         << camera.Position.z << '\n'
         << camera.Front.x << '\n'
         << camera.Front.y << '\n'
-        << camera.Front.z << '\n';
+        << camera.Front.z << '\n'
+        << ae86pos.x << '\n'
+        << ae86pos.z << '\n';
+
 }
 
 void ProgramState::LoadFromFile(std::string filename) {
@@ -93,7 +97,9 @@ void ProgramState::LoadFromFile(std::string filename) {
            >> camera.Position.z
            >> camera.Front.x
            >> camera.Front.y
-           >> camera.Front.z;
+           >> camera.Front.z
+           >> ae86pos.x
+           >> ae86pos.z;
     }
 }
 
@@ -175,8 +181,8 @@ int main() {
     DirectionLight& directionLight = programState->directionLight;
 
     directionLight.direction = glm::vec3(0.0f, -1.0f, 1.0f);
-    directionLight.ambient = glm::vec3(0.05, 0.05, 0.05);
-    directionLight.diffuse = glm::vec3(0.2f, 0.2f, 0.08f);
+    directionLight.ambient = glm::vec3(0.1, 0.1, 0.1);
+    directionLight.diffuse = glm::vec3(0.3f, 0.3f, 0.12f);
     directionLight.specular = glm::vec3(0.1, 0.1, 0.1);
 
 
@@ -302,14 +308,6 @@ int main() {
             -0.5f,  0.5f,  0.5f,
             -0.5f,  0.5f, -0.5f,
     };
-    unsigned int lightCubeVAO, lightCubeVBO;
-    glGenVertexArrays(1, &lightCubeVAO);
-    glGenBuffers(1, &lightCubeVBO);
-    glBindVertexArray(lightCubeVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, lightCubeVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), &vertices, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
 
     // load textures
     // -------------
@@ -331,12 +329,12 @@ int main() {
     // configure depth map FBO
     // -----------------------
     const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
-    unsigned int depthMapFBO;
-    glGenFramebuffers(1, &depthMapFBO);
+    unsigned int depthMap1FBO;
+    glGenFramebuffers(1, &depthMap1FBO);
     // create depth cubemap texture
-    unsigned int depthCubemap;
-    glGenTextures(1, &depthCubemap);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
+    unsigned int depthCubemap1;
+    glGenTextures(1, &depthCubemap1);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap1);
     for (unsigned int i = 0; i < 6; ++i)
         glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -345,18 +343,42 @@ int main() {
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     // attach depth texture as FBO's depth buffer
-    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, depthMap1FBO);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap1, 0);
     glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    unsigned int depthMap2FBO;
+    glGenFramebuffers(1, &depthMap2FBO);
+    // create depth cubemap texture
+    unsigned int depthCubemap2;
+    glGenTextures(1, &depthCubemap2);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap2);
+    for (unsigned int i = 0; i < 6; ++i)
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    // attach depth texture as FBO's depth buffer
+    glBindFramebuffer(GL_FRAMEBUFFER, depthMap2FBO);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap2, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
 
 
     // shader configuration
     // --------------------
     ourShader.use();
     ourShader.setInt("material.texture_diffuse1", 0);
-    ourShader.setInt("depthMap", 1);
+    ourShader.setInt("depthMap1", 1);
+    ourShader.setInt("depthMap2", 2);
+
 
     skyboxShader.use();
     skyboxShader.setInt("texture1", 0);
@@ -420,27 +442,46 @@ int main() {
         float near_plane = 1.0f;
         float far_plane  = 25.0f;
         glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), (float)SHADOW_WIDTH / (float)SHADOW_HEIGHT, near_plane, far_plane);
-        std::vector<glm::mat4> shadowTransforms;
-        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos[0], lightPos[0] + glm::vec3( 1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos[0], lightPos[0] + glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos[0], lightPos[0] + glm::vec3( 0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos[0], lightPos[0] + glm::vec3( 0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos[0], lightPos[0] + glm::vec3( 0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos[0], lightPos[0] + glm::vec3( 0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f)));
+        std::vector<glm::mat4> shadowTransforms1;
+        shadowTransforms1.push_back(shadowProj * glm::lookAt(lightPos[0], lightPos[0] + glm::vec3( 1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)));
+        shadowTransforms1.push_back(shadowProj * glm::lookAt(lightPos[0], lightPos[0] + glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)));
+        shadowTransforms1.push_back(shadowProj * glm::lookAt(lightPos[0], lightPos[0] + glm::vec3( 0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)));
+        shadowTransforms1.push_back(shadowProj * glm::lookAt(lightPos[0], lightPos[0] + glm::vec3( 0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)));
+        shadowTransforms1.push_back(shadowProj * glm::lookAt(lightPos[0], lightPos[0] + glm::vec3( 0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)));
+        shadowTransforms1.push_back(shadowProj * glm::lookAt(lightPos[0], lightPos[0] + glm::vec3( 0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f)));
 
-        // 1. render scene to depth cubemap
+        std::vector<glm::mat4> shadowTransforms2;
+        shadowTransforms2.push_back(shadowProj * glm::lookAt(lightPos[1], lightPos[1] + glm::vec3( 1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)));
+        shadowTransforms2.push_back(shadowProj * glm::lookAt(lightPos[1], lightPos[1] + glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)));
+        shadowTransforms2.push_back(shadowProj * glm::lookAt(lightPos[1], lightPos[1] + glm::vec3( 0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)));
+        shadowTransforms2.push_back(shadowProj * glm::lookAt(lightPos[1], lightPos[1] + glm::vec3( 0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)));
+        shadowTransforms2.push_back(shadowProj * glm::lookAt(lightPos[1], lightPos[1] + glm::vec3( 0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)));
+        shadowTransforms2.push_back(shadowProj * glm::lookAt(lightPos[1], lightPos[1] + glm::vec3( 0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f)));
+
+        // render scene to depth cubemap1
         // --------------------------------
         glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
-        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, depthMap1FBO);
         glClear(GL_DEPTH_BUFFER_BIT);
         depthShader.use();
         for (unsigned int i = 0; i < 6; ++i)
-            depthShader.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
+            depthShader.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms1[i]);
         depthShader.setFloat("far_plane", far_plane);
         depthShader.setVec3("lightPos", lightPos[0]);
         renderScene(depthShader);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+        // render scene to depth cubemap2
+        // --------------------------------
+        glBindFramebuffer(GL_FRAMEBUFFER, depthMap2FBO);
+        glClear(GL_DEPTH_BUFFER_BIT);
+        depthShader.use();
+        for (unsigned int i = 0; i < 6; ++i)
+            depthShader.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms2[i]);
+        depthShader.setFloat("far_plane", far_plane);
+        depthShader.setVec3("lightPos", lightPos[1]);
+        renderScene(depthShader);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
         //rendering scene with shadows
@@ -492,8 +533,12 @@ int main() {
         ourShader.setVec3("directionLight.specular", programState->directionLight.specular);
         ourShader.setVec3("directionLight.direction", programState->directionLight.direction);
 
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, roadTex);
         glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap1);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap2);
 
         renderScene(ourShader);
 
@@ -549,8 +594,8 @@ int main() {
 void renderScene(Shader &ourShader){
     //car
     glm::mat4 model2 = glm::mat4(1.0f);
-    model2 = glm::translate(model2, glm::vec3(-0.5f, 0.11f, -0.5f));
-    model2 = glm::rotate(model2, glm::radians(205.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    model2 = glm::translate(model2, programState->ae86pos);
+    model2 = glm::rotate(model2, glm::radians(programState->ae86angle), glm::vec3(0.0f, 1.0f, 0.0f));
     model2 = glm::scale(model2, glm::vec3(0.2f));
     ourShader.setMat4("model", model2);
     ourShader.setFloat("material.shininess", 128.0f);
@@ -652,6 +697,12 @@ void DrawImGui(ProgramState *programState) {
         ImGui::DragFloat("directionLight.direction.y", &programState->directionLight.direction.y, 0.05, -1.0, 1.0);
         ImGui::DragFloat("directionLight.direction.z", &programState->directionLight.direction.z, 0.05, -1.0, 1.0);
         ImGui::Checkbox("shadows", &programState->shadows);
+
+        ImGui::Text("Car positioning");
+        ImGui::DragFloat("x coordinate", &programState->ae86pos.x, 0.05, -1.5, 1.5);
+        ImGui::DragFloat("z coordinate", &programState->ae86pos.z, 0.05, -1.0, 1.0);
+        ImGui::DragFloat("angle", &programState->ae86angle, 1.0f, 0.0, 360.0);
+
         ImGui::End();
     }
 
@@ -676,6 +727,7 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
             programState->CameraMouseMovementUpdateEnabled = false;
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         } else {
+            programState->CameraMouseMovementUpdateEnabled = true;
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         }
     }

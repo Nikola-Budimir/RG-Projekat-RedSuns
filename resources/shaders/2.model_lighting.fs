@@ -53,13 +53,14 @@ uniform DirectionLight directionLight;
 uniform SpotLight spotLight;
 uniform Material material;
 
-uniform samplerCube depthMap;
+uniform samplerCube depthMap1;
+uniform samplerCube depthMap2;
 uniform float far_plane;
 uniform bool shadows;
 
 uniform vec3 viewPosition;
 
-float ShadowCalculation(vec3 fragPos, vec3 lightPos)
+float ShadowCalculation(vec3 fragPos, vec3 lightPos, samplerCube depthMap)
 {
     // get vector between fragment position and light position
     vec3 fragToLight = fragPos - lightPos;
@@ -79,7 +80,7 @@ float ShadowCalculation(vec3 fragPos, vec3 lightPos)
 }
 
 // calculates the color when using a point light.
-vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
+vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, samplerCube depthMap)
 {
     vec3 lightDir = normalize(light.position - fragPos);
     // diffuse shading
@@ -92,7 +93,7 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
     // combine results
     //shadows
-    float shadow = shadows ? ShadowCalculation(FragPos, light.position) : 0.0;
+    float shadow = shadows ? ShadowCalculation(FragPos, light.position, depthMap) : 0.0;
 
     vec3 ambientLight = light.ambient * attenuation;
     vec3 diffuseLight = light.diffuse * diff * attenuation;
@@ -156,8 +157,8 @@ void main()
 
     vec3 result = vec3(0.0f);
 
-    result += CalcPointLight(pointLight[0], normal, FragPos, viewDir);
-//     result += CalcPointLight(pointLight[1], normal, FragPos, viewDir);
+    result += CalcPointLight(pointLight[0], normal, FragPos, viewDir, depthMap1);
+    result += CalcPointLight(pointLight[1], normal, FragPos, viewDir, depthMap2);
     result += CalcDirLight(directionLight, normal, viewDir);
 
      if(spotLight.spotSwitch)
