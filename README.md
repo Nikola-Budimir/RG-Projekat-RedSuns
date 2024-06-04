@@ -2,8 +2,9 @@
 
 group A - Cubemaps
 
-group B -
+group B - Point Shadows
 
 Button press "Y" - activates spotlight
+Button press "F1" - opens up ImGui menu
 
-TO-DO: Implement shadow mapping, point shadows and fix transparency of the certain textures
+
