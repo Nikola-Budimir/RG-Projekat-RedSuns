@@ -53,7 +53,31 @@ uniform DirectionLight directionLight;
 uniform SpotLight spotLight;
 uniform Material material;
 
+uniform samplerCube depthMap;
+uniform float far_plane;
+uniform bool shadows;
+
 uniform vec3 viewPosition;
+
+float ShadowCalculation(vec3 fragPos, vec3 lightPos)
+{
+    // get vector between fragment position and light position
+    vec3 fragToLight = fragPos - lightPos;
+    // ise the fragment to light vector to sample from the depth map
+    float closestDepth = texture(depthMap, fragToLight).r;
+    // it is currently in linear range between [0,1], let's re-transform it back to original depth value
+    closestDepth *= far_plane;
+    // now get current linear depth as the length between the fragment and light position
+    float currentDepth = length(fragToLight);
+    // test for shadows
+    float bias = 0.05; // we use a much larger bias since depth is now in [near_plane, far_plane] range
+    float shadow = currentDepth -  bias > closestDepth ? 1.0 : 0.0;
+    // display closestDepth as debug (to visualize depth cubemap)
+    // FragColor = vec4(vec3(closestDepth / far_plane), 1.0);
+
+    return shadow;
+}
+
 // calculates the color when using a point light.
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
 {
@@ -67,6 +91,8 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     float distance = length(light.position - fragPos);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
     // combine results
+    //shadows
+    float shadow = shadows ? ShadowCalculation(FragPos, light.position) : 0.0;
 
     vec3 ambientLight = light.ambient * attenuation;
     vec3 diffuseLight = light.diffuse * diff * attenuation;
@@ -76,7 +102,7 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     vec3 diffuse = diffuseLight* vec3(texture(material.texture_diffuse1, TexCoords));
     vec3 specular = specularLight* vec3(texture(material.texture_specular1, TexCoords));
 
-    return (ambient + diffuse + specular);
+    return (ambient + (1.0 - shadow) * (diffuse + specular));
 }
 vec3 CalcDirLight(DirectionLight light, vec3 normal, vec3 viewDir)
 {
@@ -131,7 +157,7 @@ void main()
     vec3 result = vec3(0.0f);
 
     result += CalcPointLight(pointLight[0], normal, FragPos, viewDir);
-    result += CalcPointLight(pointLight[1], normal, FragPos, viewDir);
+//     result += CalcPointLight(pointLight[1], normal, FragPos, viewDir);
     result += CalcDirLight(directionLight, normal, viewDir);
 
      if(spotLight.spotSwitch)
