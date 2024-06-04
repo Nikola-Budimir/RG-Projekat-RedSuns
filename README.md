@@ -1,11 +1,17 @@
 # RG-Projekat-RedSuns
+### author: Nikola Budimir - mi21178
 
-group A - Cubemaps
 
-group B -
+#### group A - Cubemaps
 
-Button press "Y" - activates spotlight
+#### group B - Point Shadows
 
-TO-DO: Implement shadow mapping, point shadows and fix transparency of the certain textures
+Button press "Y" - activates spotlight\
+Button press "F1" - opens ImGui settings menu
+
+TO DO: Implement shadows for directional light and spotlight.
+
+
+
 
 
